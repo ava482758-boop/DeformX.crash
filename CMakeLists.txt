@@ -6,7 +6,6 @@ set(CMAKE_CXX_STANDARD 17)
 find_package(raylib REQUIRED)
 
 include_directories(src)
-# 加上这一行，确保能找到 raylib.h
 include_directories(${raylib_INCLUDE_DIRS})
 
 file(GLOB SOURCES "src/*.cpp")
