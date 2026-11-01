@@ -1,19 +1,4 @@
-name: Build DeformX.crash iOS IPA
-
-on:
-  push:
-    branches: [ "main" ]
-  workflow_dispatch:
-
-jobs:
-  build:
-    runs-on: macos-latest
-
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-
-    - name: Patch and Build Raylib for iOS (The reliable way)
+- name: Patch and Build Raylib for iOS (The reliable way)
       run: |
         git clone --depth 1 --branch 5.5 https://github.com/raysan5/raylib.git
         cd raylib/src
@@ -24,42 +9,15 @@ jobs:
         sed -i '' 's/#define GRAPHICS_API_OPENGL_33/\/\/ #define GRAPHICS_API_OPENGL_33/' config.h
         sed -i '' 's/\/\/ #define GRAPHICS_API_METAL/#define GRAPHICS_API_METAL/' config.h
         
-        # 用 clang 逐个编译 .c 文件，然后打包成静态库
+        # 用 clang 编译，强制指定 Objective-C 语言和 ARC
         mkdir -p obj
         for f in *.c; do
           clang -c "$f" -o "obj/${f%.c}.o" \
             -arch arm64 \
             -isysroot $(xcrun --sdk iphoneos --show-sdk-path) \
-            -mios-version-min=13.0
+            -mios-version-min=13.0 \
+            -x objective-c -fobjc-arc
         done
         
-        # 把所有编译出来的 .o 文件合并成 libraylib.a
         ar rcs libraylib.a obj/*.o
         cd ../..
-
-    - name: Configure CMake for App
-      run: |
-        cmake -B build-ios -G Xcode \
-          -DCMAKE_SYSTEM_NAME=iOS \
-          -DCMAKE_OSX_ARCHITECTURES=arm64 \
-          -DCMAKE_OSX_DEPLOYMENT_TARGET=13.0 \
-          -DCMAKE_BUILD_TYPE=Release \
-          -DCMAKE_XCODE_ATTRIBUTE_CODE_SIGNING_ALLOWED="NO" \
-          -DRAYLIB_INCLUDE_DIRS="$(pwd)/raylib/src" \
-          -DRAYLIB_LIBRARIES="$(pwd)/raylib/src/libraylib.a"
-
-    - name: Build the App
-      run: |
-        cmake --build build-ios --config Release
-        
-    - name: Package into IPA
-      run: |
-        mkdir -p Payload
-        cp -r build-ios/Release-iphoneos/DeformX.crash.app Payload/ || cp -r build-ios/Release-iphoneos/*.app Payload/
-        zip -r DeformX.crash.ipa Payload
-
-    - name: Upload IPA
-      uses: actions/upload-artifact@v4
-      with:
-        name: DeformX_IPA
-        path: DeformX.crash.ipa
