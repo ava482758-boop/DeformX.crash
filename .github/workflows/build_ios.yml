@@ -13,31 +13,29 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Clone and Patch Raylib
+    - name: Patch and Build Raylib for iOS (The reliable way)
       run: |
         git clone --depth 1 --branch 5.5 https://github.com/raysan5/raylib.git
         cd raylib/src
-        # 暴力修改，删掉桌面端，强行启用 iOS 和 Metal
+        
+        # 强行开启 iOS 和 Metal
         sed -i '' 's/#define PLATFORM_DESKTOP/\/\/ #define PLATFORM_DESKTOP/' config.h
         sed -i '' 's/\/\/ #define PLATFORM_IOS/#define PLATFORM_IOS/' config.h
         sed -i '' 's/#define GRAPHICS_API_OPENGL_33/\/\/ #define GRAPHICS_API_OPENGL_33/' config.h
         sed -i '' 's/\/\/ #define GRAPHICS_API_METAL/#define GRAPHICS_API_METAL/' config.h
-
-    - name: Build Raylib directly with xcodebuild
-      run: |
-        cd raylib/src
-        # 完全绕过 raylib 的 CMake，直接用苹果底层命令编译静态库！
-        xcodebuild -sdk iphoneos \
-          -arch arm64 \
-          -configuration Release \
-          -target raylib \
-          -project raylib.xcodeproj 2>/dev/null || \
-        clang -c *.c \
-          -arch arm64 \
-          -isysroot $(xcrun --sdk iphoneos --show-sdk-path) \
-          -mios-version-min=13.0 \
-          -DPLATFORM_IOS -DGRAPHICS_API_METAL \
-          -o raylib-ios.a
+        
+        # 用 clang 逐个编译 .c 文件，然后打包成静态库
+        mkdir -p obj
+        for f in *.c; do
+          clang -c "$f" -o "obj/${f%.c}.o" \
+            -arch arm64 \
+            -isysroot $(xcrun --sdk iphoneos --show-sdk-path) \
+            -mios-version-min=13.0
+        done
+        
+        # 把所有编译出来的 .o 文件合并成 libraylib.a
+        ar rcs libraylib.a obj/*.o
+        cd ../..
 
     - name: Configure CMake for App
       run: |
@@ -48,7 +46,7 @@ jobs:
           -DCMAKE_BUILD_TYPE=Release \
           -DCMAKE_XCODE_ATTRIBUTE_CODE_SIGNING_ALLOWED="NO" \
           -DRAYLIB_INCLUDE_DIRS="$(pwd)/raylib/src" \
-          -DRAYLIB_LIBRARIES="$(pwd)/raylib/src/raylib-ios.a"
+          -DRAYLIB_LIBRARIES="$(pwd)/raylib/src/libraylib.a"
 
     - name: Build the App
       run: |
