@@ -16,7 +16,7 @@ jobs:
     - name: Install dependencies and raylib for iOS
       run: |
         brew install cmake
-        curl -L https://github.com/raysan5/raylib/releases/download/5.0/raylib-5.0_ios.tar.gz -o raylib_ios.tar.gz
+        curl -L https://github.com/raysan5/raylib/releases/download/5.5/raylib-5.5_ios.tar.gz -o raylib_ios.tar.gz
         tar -xzf raylib_ios.tar.gz
         mv raylib-5.0_ios raylib_ios
 
