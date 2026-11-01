@@ -1,55 +1,20 @@
-name: Build DeformX.crash iOS IPA
-
-on:
-  push:
-    branches: [ "main" ]
-  workflow_dispatch:
-
-jobs:
-  build:
-    runs-on: macos-latest
-
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-
-    - name: Build raylib for iOS from source
+- name: Build raylib for iOS from source
       run: |
         git clone --depth 1 --branch 5.5 https://github.com/raysan5/raylib.git
-        cd raylib
+        cd raylib/src
+        # 【核心魔法】直接修改 raylib 的配置文件，强行打开 PLATFORM_IOS 和 Metal，关掉桌面端
+        sed -i '' 's/#define PLATFORM_DESKTOP/\/\/ #define PLATFORM_DESKTOP/' config.h
+        sed -i '' 's/\/\/ #define PLATFORM_IOS/#define PLATFORM_IOS/' config.h
+        sed -i '' 's/#define GRAPHICS_API_OPENGL_33/\/\/ #define GRAPHICS_API_OPENGL_33/' config.h
+        sed -i '' 's/\/\/ #define GRAPHICS_API_METAL/#define GRAPHICS_API_METAL/' config.h
+        
+        cd ..
         mkdir build-ios && cd build-ios
         cmake .. -G Xcode \
           -DCMAKE_SYSTEM_NAME=iOS \
           -DCMAKE_OSX_ARCHITECTURES=arm64 \
           -DCMAKE_OSX_DEPLOYMENT_TARGET=13.0 \
           -DBUILD_EXAMPLES=OFF \
-          -DCMAKE_POLICY_VERSION_MINIMUM=3.5 \
-          -DGRAPHICS=GRAPHICS_API_METAL
+          -DCMAKE_POLICY_VERSION_MINIMUM=3.5
         cmake --build . --config Release
         cd ../..
-
-    - name: Configure CMake for iOS
-      run: |
-        cmake -B build-ios -G Xcode \
-          -DCMAKE_SYSTEM_NAME=iOS \
-          -DCMAKE_OSX_ARCHITECTURES=arm64 \
-          -DCMAKE_OSX_DEPLOYMENT_TARGET=13.0 \
-          -DCMAKE_BUILD_TYPE=Release \
-          -DCMAKE_XCODE_ATTRIBUTE_CODE_SIGNING_ALLOWED="NO" \
-          -Draylib_DIR="$(pwd)/raylib/build-ios/Release-iphoneos"
-
-    - name: Build the App
-      run: |
-        cmake --build build-ios --config Release
-        
-    - name: Package into IPA
-      run: |
-        mkdir -p Payload
-        cp -r build-ios/Release-iphoneos/DeformX.crash.app Payload/ || cp -r build-ios/Release-iphoneos/*.app Payload/
-        zip -r DeformX.crash.ipa Payload
-
-    - name: Upload IPA
-      uses: actions/upload-artifact@v4
-      with:
-        name: DeformX_IPA
-        path: DeformX.crash.ipa
