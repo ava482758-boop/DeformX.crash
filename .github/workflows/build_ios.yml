@@ -15,14 +15,15 @@ jobs:
 
     - name: Build raylib for iOS from source
       run: |
-        git clone --depth 1 --branch 5.0 https://github.com/raysan5/raylib.git
+        git clone --depth 1 --branch 5.5 https://github.com/raysan5/raylib.git
         cd raylib
         mkdir build-ios && cd build-ios
         cmake .. -G Xcode \
           -DCMAKE_SYSTEM_NAME=iOS \
           -DCMAKE_OSX_ARCHITECTURES=arm64 \
           -DCMAKE_OSX_DEPLOYMENT_TARGET=13.0 \
-          -DBUILD_EXAMPLES=OFF
+          -DBUILD_EXAMPLES=OFF \
+          -DCMAKE_POLICY_VERSION_MINIMUM=3.5
         cmake --build . --config Release
         cd ../..
 
