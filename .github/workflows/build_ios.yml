@@ -13,12 +13,18 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Install dependencies and raylib for iOS
+    - name: Build raylib for iOS from source
       run: |
-        brew install cmake
-        curl -L https://github.com/raysan5/raylib/releases/download/5.5/raylib-5.5_ios.tar.gz -o raylib_ios.tar.gz
-        tar -xzf raylib_ios.tar.gz
-        mv raylib-5.0_ios raylib_ios
+        git clone --depth 1 --branch 5.0 https://github.com/raysan5/raylib.git
+        cd raylib
+        mkdir build-ios && cd build-ios
+        cmake .. -G Xcode \
+          -DCMAKE_SYSTEM_NAME=iOS \
+          -DCMAKE_OSX_ARCHITECTURES=arm64 \
+          -DCMAKE_OSX_DEPLOYMENT_TARGET=13.0 \
+          -DBUILD_EXAMPLES=OFF
+        cmake --build . --config Release
+        cd ../..
 
     - name: Configure CMake for iOS
       run: |
@@ -28,7 +34,7 @@ jobs:
           -DCMAKE_OSX_DEPLOYMENT_TARGET=13.0 \
           -DCMAKE_BUILD_TYPE=Release \
           -DCMAKE_XCODE_ATTRIBUTE_CODE_SIGNING_ALLOWED="NO" \
-          -Draylib_DIR="$(pwd)/raylib_ios/lib/cmake/raylib"
+          -Draylib_DIR="$(pwd)/raylib/build-ios/Release-iphoneos"
 
     - name: Build the App
       run: |
