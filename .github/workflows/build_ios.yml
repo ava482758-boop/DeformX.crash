@@ -24,7 +24,8 @@ jobs:
           -DCMAKE_OSX_DEPLOYMENT_TARGET=13.0 \
           -DBUILD_EXAMPLES=OFF \
           -DCMAKE_POLICY_VERSION_MINIMUM=3.5 \
-          -DGRAPHICS=GRAPHICS_API_OPENGL_11
+          -DPLATFORM=OS64 \
+          -DGRAPHICS=GRAPHICS_API_METAL
         cmake --build . --config Release
         cd ../..
 
