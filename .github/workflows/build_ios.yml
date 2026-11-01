@@ -1,0 +1,47 @@
+name: Build DeformX.crash iOS IPA
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Install dependencies and raylib for iOS
+      run: |
+        brew install cmake
+        curl -L https://github.com/raysan5/raylib/releases/download/5.0/raylib-5.0_ios.tar.gz -o raylib_ios.tar.gz
+        tar -xzf raylib_ios.tar.gz
+        mv raylib-5.0_ios raylib_ios
+
+    - name: Configure CMake for iOS
+      run: |
+        cmake -B build-ios -G Xcode \
+          -DCMAKE_SYSTEM_NAME=iOS \
+          -DCMAKE_OSX_ARCHITECTURES=arm64 \
+          -DCMAKE_OSX_DEPLOYMENT_TARGET=13.0 \
+          -DCMAKE_BUILD_TYPE=Release \
+          -DCMAKE_XCODE_ATTRIBUTE_CODE_SIGNING_ALLOWED="NO" \
+          -Draylib_DIR="$(pwd)/raylib_ios/lib/cmake/raylib"
+
+    - name: Build the App
+      run: |
+        cmake --build build-ios --config Release
+        
+    - name: Package into IPA
+      run: |
+        mkdir -p Payload
+        cp -r build-ios/Release-iphoneos/DeformX.crash.app Payload/ || cp -r build-ios/Release-iphoneos/*.app Payload/
+        zip -r DeformX.crash.ipa Payload
+
+    - name: Upload IPA
+      uses: actions/upload-artifact@v4
+      with:
+        name: DeformX_IPA
+        path: DeformX.crash.ipa
